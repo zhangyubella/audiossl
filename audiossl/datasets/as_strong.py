@@ -20,6 +20,7 @@ class TransformDataset(torch.utils.data.dataset.Dataset):
         return audio, labs, filename
 
 def ASStrongDataset(as_strong_conf, split, transform=None, target_transform=None):
+    print('asStrongDataset split: ', split)
     assert os.path.exists(as_strong_conf), f"{as_strong_conf} not exist!"
     with open(as_strong_conf, "r") as f:
         config = yaml.safe_load(f)

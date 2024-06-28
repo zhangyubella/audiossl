@@ -21,6 +21,7 @@ from audiossl.methods.atstframe.downstream.utils_as_strong.model_distill_as_stro
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
+from datetime import datetime
 
 
 def run(args, pretrained_module):
@@ -136,7 +137,7 @@ def main():
         args.prefix =  args.prefix + "_lr_scale_{}".format(args.lr_scale)
     if not args.freeze_mode:
         args.prefix += "_finetune/"
-    args.save_path = args.save_path + args.arch + args.prefix
+    args.save_path = args.save_path + args.arch + datetime.now().strftime("%m-%d-%H:%M")
     
     # Registry dataset
     # args.dataset_name = "as_strong"

@@ -66,6 +66,11 @@ def create_dcase(as_strong_conf, split, transform=None, target_transform=None):
     assert split in ["train", "valid", "test"], "Dataset type: {} is not supported.".format(split)
     return ASStrongDataset(as_strong_conf, split, transform=transform, target_transform=None)
 
+@register_dataset("ccomhuqin", multi_label=True, num_labels=8, num_folds=1)
+def create_ccomhuqin(as_strong_conf, split, transform=None, target_transform=None):
+    assert split in ["train", "valid", "test"], "Dataset type: {} is not supported.".format(split)
+    return ASStrongDataset(as_strong_conf, split, transform=transform, target_transform=None)
+
 __all__ = ['LMDBDataset',
            'Nsynth',
            'Urbansound8k',

@@ -156,7 +156,7 @@ class FineTuningPLModule(LightningModule):
         val_loss = torch.tensor(np.mean(self.val_loss))
         obj_metric = torch.tensor(intersection_f1_macro_student.item())
         self.log("val/synth/student/loss_strong", val_loss)
-        self.log("val/object_metric", val_loss, prog_bar=True)
+        self.log("val/object_metric", val_loss)
         self.log("val/synth/student/intersection_f1_macro", intersection_f1_macro_student)
         return obj_metric
 
@@ -192,7 +192,8 @@ class FineTuningPLModule(LightningModule):
         # Enable parallel computing
         evaluation.g_parallel=True
         psds.g_parallel=True
-        
+
+        # 运行代码发现psds源代码没有weighted参数，删除这个参数才能运行
         psds_score_scenario1 = compute_psds_from_operating_points(
             self.test_psds_buffer,
             self.config["data"]["test_tsv"],

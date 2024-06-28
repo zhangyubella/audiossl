@@ -1,13 +1,14 @@
 data: # change with your paths if different.
-  strong_folder: "/YOUR_OWN_PATH/AudioSet_strong/data/train/"
-  strong_folder_44k: "/YOUR_OWN_PATH/AudioSet_strong/data/train/"
-  strong_train_tsv:  "/YOUR_OWN_PATH/AudioSet_strong/meta/train/train_rm_intersect.tsv"
-  strong_val_tsv: "/YOUR_OWN_PATH/AudioSet_strong/meta/eval/eval_rm_intersect.tsv"
-  test_folder: "/YOUR_OWN_PATH/AudioSet_strong/data/eval/"
-  test_folder_44k: "/YOUR_OWN_PATH/AudioSet_strong/data/eval/"
-  test_tsv: "/YOUR_OWN_PATH/AudioSet_strong/meta/eval/eval_rm_intersect.tsv"
-  test_dur: "/YOUR_OWN_PATH/AudioSet_strong/meta/eval/eval_durations.tsv"
-  label_dict: "/YOUR_OWN_PATH/AudioSet_strong/meta/common_labels.txt"
+  strong_folder: "/root/autodl-tmp/ccomhuqin/data/train/"
+  strong_folder_44k: "/root/autodl-tmp/ccomhuqin/data/train/"
+  strong_train_tsv:  "/root/autodl-tmp/ccomhuqin/meta/train/train_rm_intersect.tsv"
+  strong_val_folder: "/root/autodl-tmp/ccomhuqin/data/val/"
+  strong_val_tsv: "/root/autodl-tmp/ccomhuqin/meta/val/val_rm_intersect.tsv"
+  test_folder: "/root/autodl-tmp/ccomhuqin/data/test/"
+  test_folder_44k: "/root/autodl-tmp/ccomhuqin/data/test/"
+  test_tsv: "/root/autodl-tmp/ccomhuqin/meta/test/eval_rm_intersect.tsv"
+  test_dur: "/root/autodl-tmp/ccomhuqin/meta/test/eval_durations.tsv"
+  label_dict: "/root/autodl-tmp/ccomhuqin/meta/common_labels.txt"
   audio_max_len: 10
   fs: 16000
   net_subsample: 4  # This param define the temporal resolution

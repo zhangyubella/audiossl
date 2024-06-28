@@ -1,3 +1,4 @@
+import librosa
 from torch.utils import data
 import torchaudio
 import glob
@@ -13,6 +14,7 @@ import lmdb
 import pickle
 import tqdm
 import pyarrow as pa
+from pydub import AudioSegment
 
 class Timer:
     def __init__(self):
@@ -220,29 +222,27 @@ class FSD50KDataset2(data.Dataset):
         return len(self.files)
 
 class FSD50KDataset3(data.Dataset):
-    def __init__(self,  path, split="train", multilabel=True, sr=16000, max_len: float = 10, max_num: int = None, transform = None):
-        self.path = path
+    def __init__(self, manifest_path, split="train", multilabel=True, sr=16000, max_len: float = 10, max_num: int = None, transform = None):
+        #self.path = path
         self.split = split
         self.multilabel = multilabel
-        labels_map = os.path.join(path, "lbl_map.json")
+        labels_map = os.path.join(manifest_path, "lbl_map.json")
         with open(labels_map, 'r') as fd:
             self.labels_map = json.load(fd)
         self.labels_delim = ","
         self.num_classes = len(self.labels_map)
 
         self.sr = sr
-
-        csv = None
         if split == "train":
-            csv = "tr.csv"
+            tsv = "tr.tsv"
         elif split == "valid":
-            csv = "val.csv"
+            tsv = "val.csv"
         elif split == "eval":
-            csv = "eval.csv"
+            tsv = "eval.csv"
         else:
             raise "split shoud be one of train|valid|eval"
 
-        df = pd.read_csv(os.path.join(path,csv))
+        df = pd.read_csv(os.path.join(manifest_path, tsv), sep='\t')
         self.files = df['files'].values
         self.labels = df['labels'].values
         assert len(self.files) == len(self.labels)
@@ -258,6 +258,8 @@ class FSD50KDataset3(data.Dataset):
         if self.multilabel:
             label_tensor = torch.zeros(len(self.labels_map)).float()
             for lbl in lbls.split(self.labels_delim):
+                if lbl == "":
+                    continue
                 label_tensor[self.labels_map[lbl]] = 1
         else:
             assert len(lbls.split(self.labels_delim)) == 1
@@ -266,16 +268,15 @@ class FSD50KDataset3(data.Dataset):
 
     def __getitem__(self, index: int):
         file_path = self.files[index]
-        waveform, sr = torchaudio.load(file_path,normalize=True)
-        waveform = torchaudio.functional.resample(waveform,sr,self.sr)
-        length = waveform.shape[-1]
-        seg_len = int(self.sr)
-        
+        waveform, sr = torchaudio.load(file_path, normalize=True)
+        if sr != self.sr:
+            waveform = torchaudio.functional.resample(waveform, sr, self.sr)
+        #waveform_mono = torch.mean(waveform, dim=0, keepdim=True)  # 在数据预处理时转成单声道，此处太耗费时间
         label = self._parse_labels(self.labels[index])
 
         if self.transform is not None:
             waveform,label =  self.transform(waveform),label
-        return waveform,label,os.path.basename(file_path)
+        return waveform, label, os.path.basename(file_path)
 
     def norm_01(self,spec):
         var,mean = torch.var_mean(spec)
@@ -286,6 +287,89 @@ class FSD50KDataset3(data.Dataset):
     def __len__(self):
         return len(self.files)
 
+
+class MusicSegmentDataset(data.Dataset):
+    def __init__(self, data_path, split="train", multilabel=True, sr=16000, window_size: int = 30,
+                 stride = 20, max_num: int = None, transform=None):
+        self.path = data_path
+        self.split = split
+        self.multilabel = multilabel
+        self.relative_path = data_path + "/audio/unbalanced_train_segments/"
+        manifest_path_ub = os.path.join(data_path, "manifest_ub")
+        labels_map = os.path.join(manifest_path_ub, "lbl_map.json")
+        with open(labels_map, 'r') as fd:
+            self.labels_map = json.load(fd)
+        self.labels_delim = ","
+        self.num_classes = len(self.labels_map)
+        self.SR = sr
+        if split == "train":
+            csv = "tr.tsv"
+        elif split == "valid":
+            csv = "val.csv"
+        elif split == "eval":
+            csv = "eval.csv"
+        else:
+            raise "split shoud be one of train|valid|eval"
+
+        df = pd.read_csv(os.path.join(manifest_path_ub, csv), sep='\t', header=0)
+        self.files = df['files'].values
+        self.labels = df['labels'].values
+        assert len(self.files) == len(self.labels)
+        self.window_size = window_size  # 切割音频的长度
+        self.stride = stride
+
+        if max_num is not None and len(self.files) > max_num:
+            self.files = self.files[:max_num]
+        #self.max_len = max_len
+
+        self.transform = transform
+
+    def _parse_labels(self, lbls: str) -> torch.Tensor:
+        if self.multilabel:
+            label_tensor = torch.zeros(len(self.labels_map)).float()
+            for lbl in lbls.split(self.labels_delim):
+                if lbl == "":
+                    continue
+                label_tensor[self.labels_map[lbl]] = 1
+        else:
+            assert len(lbls.split(self.labels_delim)) == 1
+            label_tensor = torch.tensor(self.labels_map[lbls], dtype=torch.int16)
+        return label_tensor
+
+    def __getitem__(self, index: int):
+        import wave
+        audio_path = self.files[index]
+        audio_file = os.path.split(audio_path)[1]
+        audio_len = librosa.get_duration(path=audio_path)
+
+        results = []
+        waveform, sr = torchaudio.load(audio_path, normalize=True)
+        device = torch.device('cuda')  # if torch.cuda.is_available() else 'cpu')
+        waveform = waveform.to(device)
+        if sr != self.SR:
+            waveform = torchaudio.functional.resample(waveform, orig_freq=sr, new_freq=self.SR)
+        waveform = torch.mean(waveform, dim=0, keepdim=True)  # 双声道/立体声转成单声道
+        upper = max(int(audio_len) - (self.stride - 1), 1)
+        for curr in range(0, upper, self.stride):
+            start, end = curr, curr + self.window_size
+            filename, file_extension = os.path.splitext(audio_file)
+            new_filename = filename + f'_{start}s_{end}s' + file_extension
+            start_idx, end_idx = int(start * self.SR), int(end * self.SR)
+            clip = waveform[:, start_idx: end_idx]
+            # if self.transform is not None:
+            #     clip = self.transform(clip)
+            results.append([clip.cpu(), new_filename])
+        label = self._parse_labels(self.labels[index])
+        return results, label
+
+    def norm_01(self, spec):
+        var, mean = torch.var_mean(spec)
+        spec -= mean
+        spec /= torch.sqrt(var)
+        return spec
+
+    def __len__(self):
+        return len(self.files)
 
 class LMDBDataset(data.Dataset):
     def __init__(self, db_path,split, transform=None, target_transform=None):

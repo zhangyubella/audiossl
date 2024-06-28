@@ -1,10 +1,7 @@
 data_path=$1
 arg_save_path=$2
-nproc=4
-devices=0,1,2,3
-
-
-
+nproc=1
+devices=0 #,1,2,3
 #################################################################################################
 ###################
 warmup_steps=1950
@@ -19,6 +16,7 @@ aug_stu=True
 arch=small
 mask_ratio=0.65
 mask_type="block"
+sr=16000
 anchor_len=10
 patch_h=64
 patch_w=4
@@ -29,9 +27,10 @@ pos_type="cut"
 name=pos_type_${pos_type}_arch_${arch}_subset_${subset}_n_mels${n_mels}_anchor_len${anchor_len}_lr_${lr}_ema_${ema}_symmetric${symmetric}aug_tea${aug_tea}aug_stu${aug_stu}mask_ratio${mask_ratio}mask_type${mask_type}avg_blocks${avg_blocks}_patch_h${patch_h}patch_w${patch_w}_nproc${nproc}_batch_size${batch_size}_mask_len${mask_len}_maxsteps${max_steps}_winlength${win_length}
 save_path=${arg_save_path}/$name
 ###################
-mkdir -p $save_path
+#mkdir -p $save_path
 
-echo CUDA_VISIBLE_DEVICES=$devices python train.py \
+PATH+=:/root/miniconda3/envs/audiossl/bin
+CUDA_VISIBLE_DEVICES=$devices python train.py \
 		    --arch $arch \
                     --data_path $data_path  \
                     --save_path $save_path  \

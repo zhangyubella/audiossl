@@ -27,7 +27,7 @@ class FrameATSTPredModule(pl.LightningModule):
         return x, y
 
     def finetune_mode(self):
-        if self.last_layer:
+        if self.last_layer:  # DESED，"ccom_huqin"，考虑到数据较少，只解冻最后一层
             self.freeze()
             # Unfreeze last tfm block
             for i, layer in enumerate(self.encoder.blocks):
@@ -37,7 +37,7 @@ class FrameATSTPredModule(pl.LightningModule):
             # Unfreeze last norm layer
             for n, p in self.encoder.norm_frame.named_parameters():
                 p.requires_grad = True
-        else:
+        else: # "AudioSet_Strong"数据集规模较大，Unfreeze整个模型
             for n, p in self.encoder.named_parameters():
                 if "mask_embed" in n:
                     p.requires_grad = False

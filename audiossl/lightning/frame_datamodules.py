@@ -44,6 +44,7 @@ class DownstreamDataModule(LightningDataModule):
         self.num_labels=dataset_info.num_labels
         self.multi_label=dataset_info.multi_label
         self.shuffle = shuffle
+        print('num_folds: ', num_folds)
         if num_folds > 1:
             self.dataset_train = dataset_info.creator(dcase_conf,
                                                       "train",

@@ -98,13 +98,13 @@ class PatchEmbed_v2(nn.Module):
 
 class FrameAST(nn.Module):
     """ Vision Transformer """
-    def __init__(self,nprompt=0,spec_h=64,spec_w=1001, patch_w=16,patch_h=16,pos_type="cut",avg_blocks=0, in_chans=1, num_classes=0, embed_dim=768, depth=12,
+    def __init__(self,nprompt=0,n_mels=64,spec_w=1001, patch_w=16,patch_h=16,pos_type="cut",avg_blocks=0, in_chans=1, num_classes=0, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0.1, norm_layer=nn.LayerNorm,patch_embed="Linear", **kwargs):
         super().__init__()
         self.num_features = self.embed_dim = embed_dim
         self.spec_w = spec_w
-        self.spec_h = spec_h
+        self.spec_h = n_mels
         self.embed_dim = embed_dim
         self.patch_w = patch_w
         self.patch_h = patch_h
@@ -128,7 +128,7 @@ class FrameAST(nn.Module):
             self.prompt_embed = nn.Parameter(torch.zeros(1,self.nprompt,self.embed_dim))
             trunc_normal_(self.prompt_embed, std=.02)
 
-        num_patches = get_num_patches(spec_h,spec_w,patch_h,patch_w)
+        num_patches = get_num_patches(self.spec_h,spec_w,patch_h,patch_w)
         self.num_patches = num_patches
 
 
@@ -281,6 +281,7 @@ class FrameAST(nn.Module):
         return torch.cat(output,dim=-1)
 
         
+# spec_w需要传入新的数值，默认是1001，由sr/hop_length * 10计算得来，默认音频长度是10s
 def FrameAST_small(patch_h=64,patch_w=4,**kwargs):
     return FrameAST(patch_h=patch_h,patch_w=patch_w,embed_dim=384,depth=12,num_heads=6,qkv_bias=False,norm_layer=partial(nn.LayerNorm, eps=1e-6),**kwargs)
 
